@@ -19,16 +19,12 @@ Adafruit_SH1106G display(128, 64, &Wire, -1);
 // ============================================================
 // SETTINGS
 // ============================================================
-
-// Your previous 50,000 threshold is unnecessarily high.
-// With reduced LED power, normal finger IR may be lower.
 const long FINGER_THRESHOLD = 10000;
 
-// Valid human HR range
 const float MIN_BPM = 40.0;
 const float MAX_BPM = 180.0;
 
-// Average last 4 valid beats
+
 const byte RATE_SIZE = 4;
 
 byte rates[RATE_SIZE] = {0};
@@ -203,25 +199,6 @@ void setup()
       delay(1000);
   }
 
-  // ==========================================================
-  // IMPORTANT SENSOR SETTINGS
-  // ==========================================================
-  //
-  // Previous:
-  //
-  // brightness = 60
-  // ADC range  = 4096
-  //
-  // Your IR was reaching ~230,000.
-  //
-  // New:
-  //
-  // brightness = 15
-  // ADC range  = 16384
-  //
-  // This should give checkForBeat() a much cleaner waveform.
-  // ==========================================================
-
   byte ledBrightness = 15;
 
   byte sampleAverage = 4;
@@ -243,8 +220,7 @@ void setup()
     adcRange
   );
 
-  // No additional IR override.
-  // setup() controls LED current.
+ 
 
   sensor.setPulseAmplitudeRed(0x05);
 
@@ -261,18 +237,11 @@ void setup()
   drawOLED();
 }
 
-// ============================================================
-// LOOP
-// ============================================================
 
 void loop()
 {
-  // Pull samples into FIFO
   sensor.check();
 
-  // ==========================================================
-  // Process every sensor sample
-  // ==========================================================
 
   while (sensor.available())
   {
@@ -316,27 +285,16 @@ void loop()
       Serial.println("Stabilizing...");
     }
 
-    // ========================================================
-    // Ignore first 1.5 sec
-    //
-    // Finger placement itself creates a huge optical transient,
-    // which caused your previous false "first heartbeat".
-    // ========================================================
 
     if (millis() - fingerStart < 1500)
     {
       continue;
     }
 
-    // ========================================================
-    // Beat detection
-    // ========================================================
-
     if (checkForBeat(ir))
     {
       unsigned long now = millis();
 
-      // First REAL beat
       if (lastBeat == 0)
       {
         lastBeat = now;
@@ -355,10 +313,6 @@ void loop()
 
       instantBPM = 60000.0 / (float)delta;
 
-      // ======================================================
-      // Only accept realistic BPM
-      // ======================================================
-
       if (instantBPM >= MIN_BPM &&
           instantBPM <= MAX_BPM)
       {
@@ -371,10 +325,6 @@ void loop()
 
         if (validRates < RATE_SIZE)
           validRates++;
-
-        // ====================================================
-        // Average valid beats
-        // ====================================================
 
         int total = 0;
 
@@ -429,9 +379,6 @@ void loop()
 
   // ==========================================================
   // OLED
-  //
-  // Refresh 4 times/sec only.
-  // Sensor continues at 100 samples/sec.
   // ==========================================================
 
   if (millis() - lastOLED >= 250)
